@@ -1,9 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from app.config import settings
-from sqlalchemy.exc import OperationalError
 from sqlalchemy import select
-from app.models import SourceCredibility
 
 class Base(DeclarativeBase):
     pass
@@ -22,6 +20,7 @@ def get_db():
 
 def init_db():
     from app import models  # noqa: F401
+    from app.models import SourceCredibility
     Base.metadata.create_all(bind=engine)
 
     # Seed credibility table if empty
