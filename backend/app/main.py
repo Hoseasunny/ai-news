@@ -3,12 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import init_db
 from app.routers import verify, history
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from slowapi.middleware import SlowAPIMiddleware
-
-limiter = Limiter(key_func=get_remote_address, default_limits=["10/minute"])
+from app.limiter import limiter
 
 app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
 
