@@ -18,4 +18,7 @@ export const getHistory = (limit = 20, offset = 0) =>
 export const checkHealth = () =>
   api.get('/health')
 
+export const getHealthExtended = () =>
+  api.get('/health/extended')
+
 export default api

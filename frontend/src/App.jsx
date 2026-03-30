@@ -4,6 +4,8 @@ import ResultCard from './components/ResultCard'
 import SourceList from './components/SourceList'
 import ConfidenceMeter from './components/ConfidenceMeter'
 import HistoryList from './components/HistoryList'
+import HealthStatus from './components/HealthStatus'
+import SuggestionsList from './components/SuggestionsList'
 import { useVerification } from './hooks/useVerification'
 import { useHistory } from './hooks/useHistory'
 
@@ -11,11 +13,14 @@ export default function App() {
   const { result, loading, error, verify, setResult } = useVerification()
   const { history, fetchHistory } = useHistory()
   const [localError, setLocalError] = useState(null)
+  const [activeTab, setActiveTab] = useState('sources')
+  const [lastInput, setLastInput] = useState('')
 
   const handleSubmit = async (text) => {
     setLocalError(null)
     try {
       const data = await verify(text, 5)
+      setLastInput(text)
       setResult(data)
       fetchHistory(0)
     } catch (err) {
@@ -42,15 +47,25 @@ export default function App() {
 
       <main className="grid">
         <section>
-          <InputForm onSubmit={handleSubmit} isLoading={loading} />
+          <div className="sticky-input">
+            <InputForm onSubmit={handleSubmit} isLoading={loading} />
+          </div>
           {(error || localError) && <p className="error">{localError || error}</p>}
-          <ResultCard result={result} />
+          <ResultCard result={result} loading={loading} headline={lastInput} />
         </section>
 
         <aside>
-          <ConfidenceMeter value={result?.confidence || 0} />
-          <SourceList sources={result?.sources || []} />
-          <HistoryList items={history} />
+          <ConfidenceMeter value={result?.confidence || 0} status={result?.status} />
+          <div className="tabs">
+            <button className={activeTab === 'sources' ? 'active' : ''} onClick={() => setActiveTab('sources')}>Sources</button>
+            <button className={activeTab === 'similar' ? 'active' : ''} onClick={() => setActiveTab('similar')}>Similar News</button>
+            <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>Timeline</button>
+            <button className={activeTab === 'status' ? 'active' : ''} onClick={() => setActiveTab('status')}>API Status</button>
+          </div>
+          {activeTab === 'sources' && <SourceList sources={result?.sources || []} />}
+          {activeTab === 'similar' && <SuggestionsList items={result?.suggestions || []} />}
+          {activeTab === 'history' && <HistoryList items={history} />}
+          {activeTab === 'status' && <HealthStatus />}
         </aside>
       </main>
     </div>

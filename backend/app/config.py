@@ -8,8 +8,15 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./news_verification.db"
     NEWSAPI_KEY: str = ""
     GNEWS_KEY: str = ""
-    MAX_ARTICLES_FETCH: int = 10
-    SIMILARITY_THRESHOLD: float = 0.65
+    MEDIASTACK_KEY: str = ""
+    MAX_ARTICLES_FETCH: int = 25
+    MAX_QUERY_EXPANSIONS: int = 3
+    USE_EMBEDDINGS: bool = True
+    ENABLE_QUERY_EXPANSION: bool = True
+    USE_ENTITY_QUERIES: bool = True
+    USE_FULLTEXT_QUERY: bool = True
+    QUERY_SYNONYMS: str = "election:poll|ballot;president:leader|head of state;court:tribunal|judge;protest:demonstration|rally;attack:assault|incident"
+    SIMILARITY_THRESHOLD: float = 0.50
     HIGH_CREDIBILITY_THRESHOLD: float = 0.85
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
 

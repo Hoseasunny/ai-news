@@ -26,6 +26,7 @@
   border-radius: 8px;
   font-weight: 700;
   color: #0b1220;
+  box-shadow: 0 0 12px rgba(0,0,0,0.25);
 }
 
 .progress {
@@ -38,6 +39,7 @@
 
 .progress-bar {
   height: 100%;
+  animation: grow 0.8s ease;
 }
 
 .summary {
@@ -57,6 +59,76 @@
 
 .source-item a {
   font-weight: 600;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+
+.filter-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.filter-btn.active {
+  color: var(--accent);
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
+}
+
+.source-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.source-card {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.5);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.source-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.45);
+}
+
+.source-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.source-header img {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #0b1220;
+}
+
+.source-sub {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.source-item {
+  padding: 6px 4px;
+  border-radius: 12px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.source-item:hover {
+  background: rgba(56, 189, 248, 0.08);
+  transform: translateY(-1px);
 }
 
 .source-meta {
@@ -90,6 +162,7 @@
 .meter-fill {
   height: 100%;
   background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444);
+  animation: grow 0.8s ease;
 }
 
 .history-list {
@@ -126,3 +199,139 @@
 .dot.real { background: #22c55e; }
 .dot.fake { background: #ef4444; }
 .dot.uncertain { background: #eab308; }
+
+.status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.status-pill {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.status-pill.ok { color: #22c55e; }
+.status-pill.warn { color: #facc15; }
+.status-pill.bad { color: #f87171; }
+
+.status-key {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tabs button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.tabs button.active {
+  color: var(--accent);
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
+}
+
+.sticky-input {
+  position: sticky;
+  top: 16px;
+  z-index: 5;
+}
+
+.headline {
+  font-size: 20px;
+  margin: 0 0 10px;
+}
+
+.loading {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.loading .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: bounce 1s infinite ease-in-out;
+}
+
+.loading .dot:nth-child(2) { animation-delay: 0.15s; }
+.loading .dot:nth-child(3) { animation-delay: 0.3s; }
+
+.gauge {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 8px 0 6px;
+}
+
+.gauge-center {
+  position: absolute;
+  text-align: center;
+}
+
+.gauge-value {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.gauge-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.timeline-group {
+  border-left: 2px solid rgba(56, 189, 248, 0.2);
+  padding-left: 12px;
+}
+
+.timeline-date {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-4px); opacity: 1; }
+}
+
+@keyframes grow {
+  from { width: 0; }
+}
+@media (max-width: 900px) {
+  .source-grid {
+    grid-template-columns: 1fr;
+  }
+}

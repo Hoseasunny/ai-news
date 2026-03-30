@@ -15,6 +15,7 @@ from services.credibility import CredibilityScorer
 from services.decision_engine import DecisionEngine
 from utils.hashing import hash_input
 from app.limiter import limiter
+from app.config import settings
 
 router = APIRouter(prefix="/api/v1")
 
@@ -62,6 +63,7 @@ async def verify_news(
             confidence=cached_query.confidence_score or 0.0,
             summary="Cached result",
             sources=sources[: payload.max_sources] if payload.include_sources else [],
+            suggestions=[],
             processing_time_ms=int((time.time() - start_time) * 1000),
             cached=True,
         )
@@ -95,12 +97,32 @@ async def verify_news(
     # 8. Decision
     engine = DecisionEngine()
     best_match = processed_articles[0] if processed_articles else None
-    result = engine.decide(
-        similarity_score=best_match.get('similarity_score', 0.0) if best_match else 0.0,
-        credibility_score=scorer.calculate_weighted_score(processed_articles),
-        source_count=len(processed_articles),
-        top_source_credibility=best_match.get('credibility_score', 0.0) if best_match else 0.0
+    has_high_cred_source = any(
+        (a.get('credibility_score', 0.0) or 0.0) >= settings.HIGH_CREDIBILITY_THRESHOLD
+        for a in processed_articles
     )
+
+    if not processed_articles:
+        result = engine.decide(
+            similarity_score=0.0,
+            credibility_score=0.0,
+            source_count=0,
+            top_source_credibility=0.0,
+            has_high_cred_source=False
+        )
+        result = result.__class__(
+            status="uncertain",
+            confidence=max(0.4, result.confidence),
+            reasoning="No sources available to verify this claim",
+        )
+    else:
+        result = engine.decide(
+            similarity_score=best_match.get('similarity_score', 0.0) if best_match else 0.0,
+            credibility_score=scorer.calculate_weighted_score(processed_articles),
+            source_count=len(processed_articles),
+            top_source_credibility=best_match.get('credibility_score', 0.0) if best_match else 0.0,
+            has_high_cred_source=has_high_cred_source
+        )
 
     # 9. Save to database
     new_query = VerificationQuery(
@@ -149,6 +171,17 @@ async def verify_news(
         )
         for a in sources_to_store
     ]
+    suggestions_out = [
+        SourceOut(
+            title=a.get('title', ''),
+            source=_source_domain(a.get('url', '')),
+            url=a.get('url', ''),
+            credibility_score=a.get('credibility_score', 0.0),
+            similarity_score=a.get('similarity_score', 0.0),
+            published_at=_parse_published_at(a.get('publishedAt')),
+        )
+        for a in processed_articles[payload.max_sources:payload.max_sources + 3]
+    ]
 
     return VerifyResponse(
         query_id=new_query.id,
@@ -156,6 +189,7 @@ async def verify_news(
         confidence=result.confidence,
         summary=result.reasoning,
         sources=sources_out if payload.include_sources else [],
+        suggestions=suggestions_out,
         processing_time_ms=processing_time,
         cached=False
     )

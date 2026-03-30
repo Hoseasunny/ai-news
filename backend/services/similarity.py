@@ -2,6 +2,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from app.config import settings
+from typing import Optional
 
 class SimilarityEngine:
     def __init__(self):
@@ -10,6 +11,29 @@ class SimilarityEngine:
             stop_words='english',
             ngram_range=(1, 2)
         )
+        self._embedder = self._load_embedder()
+
+    def _load_embedder(self) -> Optional[object]:
+        if not settings.USE_EMBEDDINGS:
+            return None
+        try:
+            from sentence_transformers import SentenceTransformer
+            return SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception:
+            return None
+
+    def _embed_similarity(self, input_text: str, articles: list) -> Optional[np.ndarray]:
+        if not self._embedder or not articles:
+            return None
+        texts = [input_text] + [f"{a.get('title','')} {a.get('description','')}" for a in articles]
+        try:
+            vectors = self._embedder.encode(texts, normalize_embeddings=True)
+            input_vec = vectors[0:1]
+            article_vecs = vectors[1:]
+            scores = (input_vec @ article_vecs.T).flatten()
+            return scores
+        except Exception:
+            return None
 
     def calculate_similarity(self, input_text: str, articles: list) -> list:
         if not articles:
@@ -25,6 +49,10 @@ class SimilarityEngine:
             scores = cosine_similarity(tfidf[0:1], tfidf[1:]).flatten()
         except Exception:
             scores = np.zeros(len(articles))
+
+        embed_scores = self._embed_similarity(input_text, articles)
+        if embed_scores is not None:
+            scores = (0.6 * scores) + (0.4 * embed_scores)
 
         for idx, a in enumerate(articles):
             a['similarity_score'] = float(scores[idx])

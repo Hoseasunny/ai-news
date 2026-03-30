@@ -20,8 +20,16 @@ class DecisionEngine:
         similarity_score: float,
         credibility_score: float,
         source_count: int,
-        top_source_credibility: float
+        top_source_credibility: float,
+        has_high_cred_source: bool = False
     ) -> DecisionResult:
+        if has_high_cred_source and source_count >= 1:
+            confidence = min(1.0, 0.9 + (credibility_score / 10))
+            return DecisionResult(
+                status='real',
+                confidence=confidence,
+                reasoning="At least one high-credibility source confirms this claim",
+            )
         if (
             similarity_score >= self.thresholds['high_similarity']
             and credibility_score >= self.thresholds['high_credibility']
@@ -34,8 +42,8 @@ class DecisionEngine:
                 reasoning="Multiple high-credibility sources confirm this claim",
             )
 
-        if similarity_score < 0.40 and (top_source_credibility < 0.70 or source_count == 0):
-            confidence = min(1.0, 0.7 + (0.4 - similarity_score) / 2)
+        if similarity_score < 0.30 and (top_source_credibility < 0.70) and source_count < 2:
+            confidence = min(1.0, 0.7 + (0.3 - similarity_score) / 2)
             return DecisionResult(
                 status='fake',
                 confidence=confidence,

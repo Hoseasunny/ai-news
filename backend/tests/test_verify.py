@@ -23,17 +23,17 @@ def test_input_validation_too_short():
 
 def test_decision_engine_real():
     engine = DecisionEngine()
-    result = engine.decide(0.8, 0.9, 3, 0.9)
+    result = engine.decide(0.2, 0.9, 1, 0.9, True)
     assert result.status == "real"
 
 
 def test_decision_engine_fake():
     engine = DecisionEngine()
-    result = engine.decide(0.1, 0.2, 0, 0.2)
+    result = engine.decide(0.1, 0.2, 0, 0.2, False)
     assert result.status == "fake"
 
 
 def test_decision_engine_uncertain():
     engine = DecisionEngine()
-    result = engine.decide(0.5, 0.5, 1, 0.5)
+    result = engine.decide(0.5, 0.5, 1, 0.5, False)
     assert result.status == "uncertain"

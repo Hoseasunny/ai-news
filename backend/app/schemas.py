@@ -21,6 +21,7 @@ class VerifyResponse(BaseModel):
     confidence: float
     summary: str
     sources: List[SourceOut]
+    suggestions: List[SourceOut] = []
     processing_time_ms: int
     cached: bool
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 const scoreColor = (score) => {
   if (score >= 0.85) return 'good'
@@ -21,9 +21,20 @@ const getDomain = (url) => {
   }
 }
 
+const thresholds = [
+  { label: 'All', value: 0 },
+  { label: '70%+', value: 0.7 },
+  { label: '85%+', value: 0.85 }
+]
+
 export default function SourceList({ sources = [] }) {
   const [showAll, setShowAll] = useState(false)
-  const visible = showAll ? sources : sources.slice(0, 5)
+  const [minCred, setMinCred] = useState(0)
+  const filtered = useMemo(
+    () => sources.filter((s) => (s.credibility_score || 0) >= minCred),
+    [sources, minCred]
+  )
+  const visible = showAll ? filtered : filtered.slice(0, 6)
 
   if (!sources.length) {
     return (
@@ -37,14 +48,33 @@ export default function SourceList({ sources = [] }) {
   return (
     <div className="card">
       <h3>Sources</h3>
-      <div className="source-list">
+      <div className="filters">
+        {thresholds.map((t) => (
+          <button
+            key={t.value}
+            className={`filter-btn ${minCred === t.value ? 'active' : ''}`}
+            onClick={() => setMinCred(t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="source-grid">
         {visible.map((s, idx) => (
-          <div className="source-item" key={`${s.url}-${idx}`}>
-            <a href={s.url} target="_blank" rel="noreferrer">
-              {s.title}
-            </a>
+          <div className="source-card" key={`${s.url}-${idx}`}>
+            <div className="source-header">
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${getDomain(s.url)}&sz=64`}
+                alt=""
+              />
+              <div>
+                <a href={s.url} target="_blank" rel="noreferrer">
+                  {s.title}
+                </a>
+                <div className="source-sub">{getDomain(s.url)}</div>
+              </div>
+            </div>
             <div className="source-meta">
-              <span className="pill">{getDomain(s.url)}</span>
               <span className={`pill ${scoreColor(s.credibility_score)}`}>
                 Credibility {Math.round((s.credibility_score || 0) * 100)}%
               </span>
@@ -56,7 +86,7 @@ export default function SourceList({ sources = [] }) {
           </div>
         ))}
       </div>
-      {sources.length > 5 && (
+      {filtered.length > 6 && (
         <button className="ghost" onClick={() => setShowAll(!showAll)}>
           {showAll ? 'Show less' : 'Show more'}
         </button>

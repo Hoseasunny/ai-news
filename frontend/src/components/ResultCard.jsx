@@ -4,13 +4,26 @@ const STATUS_COLORS = {
   uncertain: '#eab308'
 }
 
-export default function ResultCard({ result }) {
-  if (!result) return null
+export default function ResultCard({ result, loading, headline }) {
+  if (!result && !loading) return null
+  if (loading && !result) {
+    return (
+      <div className="card result-card">
+        <div className="loading">
+          <span className="dot" />
+          <span className="dot" />
+          <span className="dot" />
+        </div>
+        <p className="muted">Analyzing sources and credibility...</p>
+      </div>
+    )
+  }
   const color = STATUS_COLORS[result.status] || '#94a3b8'
   const confidencePct = Math.round((result.confidence || 0) * 100)
 
   return (
     <div className="card result-card">
+      {headline && <h2 className="headline">{headline}</h2>}
       <div className="status-row">
         <span className="status-badge" style={{ background: color }}>
           {result.status.toUpperCase()}
