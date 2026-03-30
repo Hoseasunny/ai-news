@@ -248,6 +248,10 @@
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
 }
 
+.bottom-section {
+  margin-top: 24px;
+}
+
 .sticky-input {
   position: sticky;
   top: 16px;

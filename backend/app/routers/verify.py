@@ -57,13 +57,28 @@ async def verify_news(
             )
             for s in cached_query.sources
         ]
+        if payload.include_sources:
+            sources = sources[: payload.max_sources]
+        else:
+            sources = []
+        suggestions = [
+            SourceOut(
+                title=s.title,
+                source=s.source_name,
+                url=s.source_url,
+                credibility_score=s.credibility_score or 0.0,
+                similarity_score=s.similarity_score or 0.0,
+                published_at=s.published_at,
+            )
+            for s in cached_query.sources[payload.max_sources:payload.max_sources + 3]
+        ]
         return VerifyResponse(
             query_id=cached_query.id,
             status=cached_query.status,
             confidence=cached_query.confidence_score or 0.0,
             summary="Cached result",
-            sources=sources[: payload.max_sources] if payload.include_sources else [],
-            suggestions=[],
+            sources=sources,
+            suggestions=suggestions,
             processing_time_ms=int((time.time() - start_time) * 1000),
             cached=True,
         )

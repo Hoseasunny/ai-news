@@ -1,5 +1,12 @@
 export default function SuggestionsList({ items = [] }) {
-  if (!items.length) return null
+  if (!items.length) {
+    return (
+      <div className="card">
+        <h3>Similar News Suggestions</h3>
+        <p className="muted">No similar articles found for this query yet.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="card">

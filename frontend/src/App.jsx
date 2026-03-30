@@ -23,6 +23,9 @@ export default function App() {
       setLastInput(text)
       setResult(data)
       fetchHistory(0)
+      if (data?.suggestions?.length) {
+        setActiveTab('similar')
+      }
     } catch (err) {
       const status = err?.response?.status
       if (status === 429) {
@@ -56,18 +59,22 @@ export default function App() {
 
         <aside>
           <ConfidenceMeter value={result?.confidence || 0} status={result?.status} />
-          <div className="tabs">
-            <button className={activeTab === 'sources' ? 'active' : ''} onClick={() => setActiveTab('sources')}>Sources</button>
-            <button className={activeTab === 'similar' ? 'active' : ''} onClick={() => setActiveTab('similar')}>Similar News</button>
-            <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>Timeline</button>
-            <button className={activeTab === 'status' ? 'active' : ''} onClick={() => setActiveTab('status')}>API Status</button>
-          </div>
-          {activeTab === 'sources' && <SourceList sources={result?.sources || []} />}
-          {activeTab === 'similar' && <SuggestionsList items={result?.suggestions || []} />}
-          {activeTab === 'history' && <HistoryList items={history} />}
-          {activeTab === 'status' && <HealthStatus />}
+          <HealthStatus />
         </aside>
       </main>
+
+      <section className="bottom-section">
+        <div className="tabs">
+          <button className={activeTab === 'sources' ? 'active' : ''} onClick={() => setActiveTab('sources')}>Sources</button>
+          <button className={activeTab === 'similar' ? 'active' : ''} onClick={() => setActiveTab('similar')}>Similar News</button>
+          <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>Timeline</button>
+          <button className={activeTab === 'status' ? 'active' : ''} onClick={() => setActiveTab('status')}>API Status</button>
+        </div>
+        {activeTab === 'sources' && <SourceList sources={result?.sources || []} />}
+        {activeTab === 'similar' && <SuggestionsList items={result?.suggestions || []} />}
+        {activeTab === 'history' && <HistoryList items={history} />}
+        {activeTab === 'status' && <HealthStatus />}
+      </section>
     </div>
   )
 }

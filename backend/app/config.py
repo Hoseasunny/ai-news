@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     NEWSAPI_KEY: str = ""
     GNEWS_KEY: str = ""
     MEDIASTACK_KEY: str = ""
-    MAX_ARTICLES_FETCH: int = 25
+    MAX_ARTICLES_FETCH: int = 40
     MAX_QUERY_EXPANSIONS: int = 3
     USE_EMBEDDINGS: bool = True
     ENABLE_QUERY_EXPANSION: bool = True
