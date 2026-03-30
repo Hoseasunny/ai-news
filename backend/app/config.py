@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     USE_ENTITY_QUERIES: bool = True
     USE_FULLTEXT_QUERY: bool = True
     QUERY_SYNONYMS: str = "election:poll|ballot;president:leader|head of state;court:tribunal|judge;protest:demonstration|rally;attack:assault|incident"
+    NEWSAPI_LOAD_FACTOR: int = 2
+    GNEWS_LOAD_FACTOR: int = 2
+    MEDIASTACK_LOAD_FACTOR: float = 0.5
     SIMILARITY_THRESHOLD: float = 0.50
     HIGH_CREDIBILITY_THRESHOLD: float = 0.85
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"

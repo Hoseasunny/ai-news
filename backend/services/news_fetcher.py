@@ -27,9 +27,10 @@ class NewsFetcher:
         async with httpx.AsyncClient(timeout=10.0) as client:
             for q in queries:
                 if settings.NEWSAPI_KEY:
+                    newsapi_size = max(1, page_size * settings.NEWSAPI_LOAD_FACTOR)
                     params = {
                         "q": q,
-                        "pageSize": page_size,
+                        "pageSize": newsapi_size,
                         "language": "en",
                         "sortBy": "relevancy",
                         "apiKey": settings.NEWSAPI_KEY,
@@ -38,9 +39,10 @@ class NewsFetcher:
                         params["from"] = date_from
                     tasks.append(self._fetch_newsapi(client, params))
                 if settings.GNEWS_KEY:
+                    gnews_size = max(1, page_size * settings.GNEWS_LOAD_FACTOR)
                     params = {
                         "q": q,
-                        "max": page_size,
+                        "max": gnews_size,
                         "lang": "en",
                         "token": settings.GNEWS_KEY,
                     }
@@ -48,11 +50,12 @@ class NewsFetcher:
                         params["from"] = date_from
                     tasks.append(self._fetch_gnews(client, params))
                 if settings.MEDIASTACK_KEY:
+                    mediastack_size = max(1, int(page_size * settings.MEDIASTACK_LOAD_FACTOR))
                     params = {
                         "access_key": settings.MEDIASTACK_KEY,
                         "keywords": q,
                         "languages": "en",
-                        "limit": page_size,
+                        "limit": mediastack_size,
                     }
                     if date_from:
                         params["date"] = f"{date_from},{date_to}"
@@ -66,6 +69,9 @@ class NewsFetcher:
         merged = []
         for batch in results:
             merged.extend(batch)
+
+        priority = {"newsapi": 0, "gnews": 1, "mediastack": 2}
+        merged.sort(key=lambda x: priority.get(x.get("provider", ""), 99))
 
         deduped = []
         seen = set()
@@ -115,6 +121,7 @@ class NewsFetcher:
                     "url": a.get("url") or "",
                     "source": (a.get("source") or {}).get("name") or "",
                     "publishedAt": a.get("publishedAt"),
+                    "provider": "newsapi",
                 }
                 for a in articles
                 if a.get("title") and a.get("url")
@@ -135,6 +142,7 @@ class NewsFetcher:
                     "url": a.get("url") or "",
                     "source": (a.get("source") or {}).get("name") or "",
                     "publishedAt": a.get("publishedAt"),
+                    "provider": "gnews",
                 }
                 for a in articles
                 if a.get("title") and a.get("url")
@@ -155,6 +163,7 @@ class NewsFetcher:
                     "url": a.get("url") or "",
                     "source": a.get("source") or "",
                     "publishedAt": a.get("published_at"),
+                    "provider": "mediastack",
                 }
                 for a in articles
                 if a.get("title") and a.get("url")

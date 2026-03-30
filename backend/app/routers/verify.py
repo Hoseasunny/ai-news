@@ -118,17 +118,10 @@ async def verify_news(
     )
 
     if not processed_articles:
-        result = engine.decide(
-            similarity_score=0.0,
-            credibility_score=0.0,
-            source_count=0,
-            top_source_credibility=0.0,
-            has_high_cred_source=False
-        )
         result = result.__class__(
-            status="uncertain",
-            confidence=max(0.4, result.confidence),
-            reasoning="No sources available to verify this claim",
+            status="fake",
+            confidence=0.90,
+            reasoning="No sources found to verify this claim",
         )
     else:
         result = engine.decide(
