@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Literal
+from app.config import settings
 
 @dataclass
 class DecisionResult:
@@ -21,10 +22,31 @@ class DecisionEngine:
         credibility_score: float,
         source_count: int,
         top_source_credibility: float,
-        has_high_cred_source: bool = False
+        has_high_cred_source: bool = False,
+        is_sensitive: bool = False,
+        agreeing_sources: int = 0,
+        avg_source_similarity: float = 0.0,
+        freshness_penalty: float = 0.0
     ) -> DecisionResult:
-        if has_high_cred_source and source_count >= 1:
-            confidence = min(1.0, 0.9 + (credibility_score / 10))
+        min_sim = settings.SENSITIVE_MIN_SIMILARITY if is_sensitive else settings.HIGH_CRED_MIN_SIMILARITY
+        if has_high_cred_source:
+            return DecisionResult(
+                status='real',
+                confidence=0.98,
+                reasoning="High-credibility source present; treating claim as true",
+            )
+        if agreeing_sources >= 2 and avg_source_similarity >= 0.45:
+            confidence = min(1.0, 0.92 + (credibility_score / 10))
+            confidence = max(0.0, confidence - freshness_penalty)
+            return DecisionResult(
+                status='real',
+                confidence=confidence,
+                reasoning="Multiple high-credibility sources agree on this claim",
+            )
+
+        if has_high_cred_source and source_count >= 1 and similarity_score >= min_sim:
+            confidence = min(1.0, 0.88 + (credibility_score / 10))
+            confidence = max(0.0, confidence - freshness_penalty)
             return DecisionResult(
                 status='real',
                 confidence=confidence,
@@ -51,6 +73,7 @@ class DecisionEngine:
             )
 
         confidence = max(0.4, min(0.7, 0.4 + (similarity_score + credibility_score) / 4))
+        confidence = max(0.0, confidence - freshness_penalty)
         return DecisionResult(
             status='uncertain',
             confidence=confidence,

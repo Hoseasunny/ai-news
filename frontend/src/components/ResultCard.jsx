@@ -34,6 +34,13 @@ export default function ResultCard({ result, loading, headline }) {
         <div className="progress-bar" style={{ width: `${confidencePct}%`, background: color }} />
       </div>
       <p className="summary">{result.summary}</p>
+      {result.reasons && result.reasons.length > 0 && (
+        <ul className="reasons">
+          {result.reasons.map((r, i) => (
+            <li key={`${r}-${i}`}>{r}</li>
+          ))}
+        </ul>
+      )}
       <p className="meta">Processing time: {result.processing_time_ms} ms</p>
     </div>
   )

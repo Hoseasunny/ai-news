@@ -89,12 +89,15 @@ class NewsFetcher:
         if max_results is None:
             max_results = settings.MAX_ARTICLES_FETCH
 
-        keywords = self._extract_keywords(query)
-        entities = self._extract_entities(query) if settings.USE_ENTITY_QUERIES else []
-        expansions = self._expand_queries(query, keywords, entities)
-        queries = list(self._dedupe_queries(expansions))[: settings.MAX_QUERY_EXPANSIONS]
+        if settings.USE_FULLTEXT_ONLY:
+            queries = [query.strip()] if query.strip() else []
+        else:
+            keywords = self._extract_keywords(query)
+            entities = self._extract_entities(query) if settings.USE_ENTITY_QUERIES else []
+            expansions = self._expand_queries(query, keywords, entities)
+            queries = list(self._dedupe_queries(expansions))[: settings.MAX_QUERY_EXPANSIONS]
         if not queries:
-            queries = [keywords or query]
+            queries = [query]
 
         page_size = max(1, max_results // max(1, len(queries)) // 2)
         date_from = self._extract_date_window(query)

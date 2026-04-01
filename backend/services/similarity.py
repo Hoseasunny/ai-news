@@ -67,3 +67,21 @@ class SimilarityEngine:
         if score < settings.SIMILARITY_THRESHOLD:
             return None, 0.0
         return best, score
+
+    def pairwise_similarity(self, articles: list) -> float:
+        if len(articles) < 2:
+            return 0.0
+        texts = [f"{a.get('title','')} {a.get('description','')}" for a in articles[:3]]
+        try:
+            tfidf = self.vectorizer.fit_transform(texts)
+            sims = cosine_similarity(tfidf)
+            # average upper triangle excluding diagonal
+            total = 0.0
+            count = 0
+            for i in range(len(texts)):
+                for j in range(i + 1, len(texts)):
+                    total += sims[i][j]
+                    count += 1
+            return float(total / count) if count else 0.0
+        except Exception:
+            return 0.0

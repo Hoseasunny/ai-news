@@ -12,7 +12,7 @@ from services.news_fetcher import NewsFetcher
 from services.nlp_processor import NLPProcessor
 from services.similarity import SimilarityEngine
 from services.credibility import CredibilityScorer
-from services.decision_engine import DecisionEngine
+from services.decision_engine import DecisionEngine, DecisionResult
 from utils.hashing import hash_input
 from app.limiter import limiter
 from app.config import settings
@@ -46,6 +46,7 @@ async def verify_news(
     ).scalar_one_or_none()
 
     if cached_query:
+        trace = {"cached": True}
         sources = [
             SourceOut(
                 title=s.title,
@@ -79,6 +80,8 @@ async def verify_news(
             summary="Cached result",
             sources=sources,
             suggestions=suggestions,
+            reasons=["Cached result"],
+            decision_trace=trace,
             processing_time_ms=int((time.time() - start_time) * 1000),
             cached=True,
         )
@@ -94,42 +97,109 @@ async def verify_news(
     except Exception:
         articles = []
 
+    reasons = []
+
     # 5. Process and score
     _ = nlp.process(text)
     processed_articles = similarity.calculate_similarity(text, articles)
 
     # 6. Credibility scores
     scorer = CredibilityScorer(db)
+    filtered = []
     for article in processed_articles:
-        article['credibility_score'] = scorer.get_score(article.get('url', ''))
+        score, known, blacklisted = scorer.get_score(article.get('url', ''))
+        if blacklisted:
+            continue
+        domain = _source_domain(article.get('url', ''))
+        if settings.ENFORCE_WHITELIST and not known:
+            continue
+        article['credibility_score'] = score
+        article['domain'] = domain
+        filtered.append(article)
+    processed_articles = filtered
 
-    # 7. Sort by combined score
-    processed_articles.sort(
-        key=lambda x: x.get('similarity_score', 0.0) * x.get('credibility_score', 0.0),
-        reverse=True
-    )
-
-    # 8. Decision
-    engine = DecisionEngine()
-    best_match = processed_articles[0] if processed_articles else None
+    # 7. Pre-calc high-cred signals
     has_high_cred_source = any(
         (a.get('credibility_score', 0.0) or 0.0) >= settings.HIGH_CREDIBILITY_THRESHOLD
         for a in processed_articles
     )
+    high_cred_count = sum(
+        1 for a in processed_articles
+        if (a.get('credibility_score', 0.0) or 0.0) >= settings.HIGH_CREDIBILITY_THRESHOLD
+    )
 
-    if not processed_articles:
-        result = result.__class__(
-            status="fake",
-            confidence=0.90,
-            reasoning="No sources found to verify this claim",
+    # 8. Sort by score
+    if has_high_cred_source:
+        # If a high-cred domain exists, ignore similarity when ranking
+        processed_articles.sort(
+            key=lambda x: x.get('credibility_score', 0.0),
+            reverse=True
         )
     else:
+        processed_articles.sort(
+            key=lambda x: x.get('similarity_score', 0.0) * x.get('credibility_score', 0.0),
+            reverse=True
+        )
+
+    # 9. Decision
+    engine = DecisionEngine()
+    best_match = processed_articles[0] if processed_articles else None
+    if has_high_cred_source:
+        agreeing_sources = high_cred_count
+    else:
+        agreeing_sources = sum(
+            1 for a in processed_articles
+            if (a.get('credibility_score', 0.0) or 0.0) >= settings.HIGH_CREDIBILITY_THRESHOLD
+            and (a.get('similarity_score', 0.0) or 0.0) >= settings.HIGH_CRED_MIN_SIMILARITY
+        )
+    is_sensitive = _is_sensitive(text)
+    avg_source_similarity = 1.0 if has_high_cred_source else similarity.pairwise_similarity(processed_articles)
+    freshness_penalty, freshness_reason = _freshness_penalty(processed_articles, text)
+    if freshness_reason:
+        reasons.append(freshness_reason)
+
+    trace = {
+        "source_count": len(processed_articles),
+        "high_cred_count": high_cred_count,
+        "agreeing_sources": agreeing_sources,
+        "avg_source_similarity": avg_source_similarity,
+        "freshness_penalty": freshness_penalty,
+        "is_sensitive": is_sensitive,
+        "similarity_score": best_match.get("similarity_score", 0.0) if best_match else 0.0,
+        "credibility_score": scorer.calculate_weighted_score(processed_articles),
+        "top_source_credibility": best_match.get("credibility_score", 0.0) if best_match else 0.0,
+        "whitelist_enforced": settings.ENFORCE_WHITELIST,
+        "blacklist_active": bool(settings.BLACKLIST_DOMAINS.strip()),
+    }
+
+    if not processed_articles:
+        result = DecisionResult(
+            status="fake",
+            confidence=0.75,
+            reasoning="No sources found to verify this claim",
+        )
+        reasons.append("No sources matched the whitelist/blacklist rules")
+    else:
+        if settings.ENFORCE_WHITELIST:
+            reasons.append("Whitelist enforcement enabled")
+        if settings.BLACKLIST_DOMAINS.strip():
+            reasons.append("Blacklist filtering applied")
+        if high_cred_count >= 2:
+            reasons.append("Multiple high-credibility sources found")
+        elif has_high_cred_source:
+            reasons.append("At least one high-credibility source found")
+        if avg_source_similarity < 0.3:
+            reasons.append("Low agreement across sources")
         result = engine.decide(
             similarity_score=best_match.get('similarity_score', 0.0) if best_match else 0.0,
             credibility_score=scorer.calculate_weighted_score(processed_articles),
             source_count=len(processed_articles),
             top_source_credibility=best_match.get('credibility_score', 0.0) if best_match else 0.0,
-            has_high_cred_source=has_high_cred_source
+            has_high_cred_source=has_high_cred_source,
+            is_sensitive=is_sensitive,
+            agreeing_sources=agreeing_sources,
+            avg_source_similarity=avg_source_similarity,
+            freshness_penalty=freshness_penalty
         )
 
     # 9. Save to database
@@ -198,6 +268,8 @@ async def verify_news(
         summary=result.reasoning,
         sources=sources_out if payload.include_sources else [],
         suggestions=suggestions_out,
+        reasons=reasons,
+        decision_trace=trace,
         processing_time_ms=processing_time,
         cached=False
     )
@@ -221,3 +293,37 @@ def _source_domain(url: str) -> str:
         return host or "unknown"
     except Exception:
         return "unknown"
+
+
+def _is_sensitive(text: str) -> bool:
+    import re
+    pattern = re.compile(rf"\\b({settings.SENSITIVE_KEYWORDS})\\b", re.IGNORECASE)
+    return bool(pattern.search(text))
+
+
+def _freshness_penalty(articles, text: str):
+    if not articles:
+        return 0.0, None
+    latest = None
+    for a in articles:
+        dt = _parse_published_at(a.get("publishedAt"))
+        if not dt:
+            continue
+        if latest is None or dt > latest:
+            latest = dt
+    if not latest:
+        return 0.0, None
+
+    age_days = (datetime.utcnow() - latest.replace(tzinfo=None)).days
+    breaking = _is_breaking(text)
+    if breaking and age_days > settings.FRESHNESS_SOFT_DAYS:
+        return 0.15, "Claim appears time-sensitive but sources are not recent"
+    if age_days > settings.FRESHNESS_HARD_DAYS:
+        return 0.2, "Sources are older than expected for a current claim"
+    return 0.0, None
+
+
+def _is_breaking(text: str) -> bool:
+    import re
+    pattern = re.compile(rf"\\b({settings.BREAKING_KEYWORDS})\\b", re.IGNORECASE)
+    return bool(pattern.search(text))

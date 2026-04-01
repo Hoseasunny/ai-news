@@ -22,6 +22,8 @@ class VerifyResponse(BaseModel):
     summary: str
     sources: List[SourceOut]
     suggestions: List[SourceOut] = []
+    reasons: List[str] = []
+    decision_trace: dict = {}
     processing_time_ms: int
     cached: bool
 

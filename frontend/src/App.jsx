@@ -6,6 +6,7 @@ import ConfidenceMeter from './components/ConfidenceMeter'
 import HistoryList from './components/HistoryList'
 import HealthStatus from './components/HealthStatus'
 import SuggestionsList from './components/SuggestionsList'
+import DecisionTrace from './components/DecisionTrace'
 import { useVerification } from './hooks/useVerification'
 import { useHistory } from './hooks/useHistory'
 
@@ -69,11 +70,13 @@ export default function App() {
           <button className={activeTab === 'similar' ? 'active' : ''} onClick={() => setActiveTab('similar')}>Similar News</button>
           <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>Timeline</button>
           <button className={activeTab === 'status' ? 'active' : ''} onClick={() => setActiveTab('status')}>API Status</button>
+          <button className={activeTab === 'trace' ? 'active' : ''} onClick={() => setActiveTab('trace')}>Trace</button>
         </div>
         {activeTab === 'sources' && <SourceList sources={result?.sources || []} />}
         {activeTab === 'similar' && <SuggestionsList items={result?.suggestions || []} />}
         {activeTab === 'history' && <HistoryList items={history} />}
         {activeTab === 'status' && <HealthStatus />}
+        {activeTab === 'trace' && <DecisionTrace trace={result?.decision_trace} />}
       </section>
     </div>
   )
